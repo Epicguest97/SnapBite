@@ -10,9 +10,22 @@
 		2AED0E1D3050064600BC8C11 /* biteAi.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = biteAi.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		2AED0E2F3050089400BC8C11 /* Exceptions for "biteAi" folder in "biteAi" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 2AED0E1C3050064600BC8C11 /* biteAi */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		2AED0E1F3050064600BC8C11 /* biteAi */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				2AED0E2F3050089400BC8C11 /* Exceptions for "biteAi" folder in "biteAi" target */,
+			);
 			path = biteAi;
 			sourceTree = "<group>";
 		};
@@ -256,6 +269,8 @@
 				DEVELOPMENT_TEAM = 6Y3UP5398T;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = biteAi/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "inBiteAI uses the camera to analyze your food.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -288,6 +303,8 @@
 				DEVELOPMENT_TEAM = 6Y3UP5398T;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = biteAi/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "inBiteAI uses the camera to analyze your food.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

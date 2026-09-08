@@ -21,7 +21,12 @@ struct ContentView: View {
             Group {
                 switch selectedTab {
                 case .today:
-                    TodayView(meals: meals, goals: goals) { mealBeingEdited = $0 }
+                    TodayView(
+                        meals: meals,
+                        goals: goals,
+                        editMeal: { mealBeingEdited = $0 },
+                        deleteMeal: deleteMeal
+                    )
                 case .scan:
                     ScanView(image: capturedImage, foods: $detectedFoods, mealType: $selectedMealType, openCamera: startScan, logFood: logFood)
                 case .log:
@@ -32,10 +37,14 @@ struct ContentView: View {
             .navigationBarHidden(true)
             .sheet(isPresented: $showCamera) { ImagePicker(image: $capturedImage) }
             .sheet(item: $mealBeingEdited) { meal in
-                MealEditor(meal: meal) { updatedMeal in
-                    guard let index = meals.firstIndex(where: { $0.id == updatedMeal.id }) else { return }
-                    meals[index] = updatedMeal
-                }
+                MealEditor(
+                    meal: meal,
+                    save: { updatedMeal in
+                        guard let index = meals.firstIndex(where: { $0.id == updatedMeal.id }) else { return }
+                        meals[index] = updatedMeal
+                    },
+                    delete: deleteMeal
+                )
             }
             .sheet(isPresented: $showProfile) {
                 NavigationStack {
@@ -65,6 +74,7 @@ struct ContentView: View {
     }
 
     private func logFood() {
+        let photoData = capturedImage?.jpegData(compressionQuality: 0.8)
         meals.insert(
             Meal(
                 name: "Chicken rice bowl",
@@ -75,12 +85,17 @@ struct ContentView: View {
                 protein: detectedFoods.reduce(0) { $0 + $1.protein },
                 carbs: detectedFoods.reduce(0) { $0 + $1.carbs },
                 fat: detectedFoods.reduce(0) { $0 + $1.fat },
-                date: .now
+                date: .now,
+                imageData: photoData
             ),
             at: 0
         )
         capturedImage = nil
         selectedTab = .today
+    }
+
+    private func deleteMeal(_ meal: Meal) {
+        meals.removeAll { $0.id == meal.id }
     }
 }
 
@@ -88,30 +103,46 @@ private struct TodayView: View {
     let meals: [Meal]
     let goals: NutritionGoals
     let editMeal: (Meal) -> Void
+    let deleteMeal: (Meal) -> Void
     private var todayMeals: [Meal] { meals.filter { Calendar.current.isDateInToday($0.date) } }
     private var calories: Int { todayMeals.reduce(0) { $0 + $1.calories } }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
+        List {
+            Section {
                 VStack(alignment: .leading, spacing: 5) {
                     Text("Today").font(.largeTitle.bold())
                     Text(Date.now.formatted(date: .complete, time: .omitted)).foregroundStyle(.secondary)
                 }
+                .listRowSeparator(.hidden)
                 CalorieSummary(consumed: calories, goal: goals.calories)
+                    .listRowSeparator(.hidden)
+            }
+            .listRowBackground(Color.clear)
+            .listRowInsets(EdgeInsets(top: 20, leading: 20, bottom: 0, trailing: 20))
+
+            Section {
+                if todayMeals.isEmpty {
+                    ContentUnavailableView("No meals logged", systemImage: "fork.knife", description: Text("Scan a meal to add it here."))
+                } else {
+                    ForEach(todayMeals) { meal in
+                        MealCard(meal: meal)
+                            .contentShape(Rectangle())
+                            .onTapGesture { editMeal(meal) }
+                    }
+                }
+            }
+            header: {
                 HStack {
                     Text("Meals").font(.title3.bold())
                     Spacer()
                     Text("\(todayMeals.count) logged").font(.subheadline).foregroundStyle(.secondary)
                 }
-                if todayMeals.isEmpty {
-                    ContentUnavailableView("No meals logged", systemImage: "fork.knife", description: Text("Scan a meal to add it here."))
-                } else {
-                    ForEach(todayMeals) { meal in MealCard(meal: meal) { editMeal(meal) } }
-                }
+                .textCase(nil)
             }
-            .padding(20).padding(.bottom, 18)
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
     }
 }
 
@@ -234,13 +265,10 @@ private struct DetectedFoodRow: View {
 }
 
 private struct MealCard: View {
-    let meal: Meal; let action: () -> Void
+    let meal: Meal
     var body: some View {
-        Button(action: action) {
             HStack(spacing: 13) {
-                Image(systemName: meal.mealType == .breakfast ? "sunrise.fill" : "fork.knife")
-                    .foregroundStyle(AppTheme.accent).frame(width: 42, height: 42)
-                    .background(AppTheme.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+                MealThumbnail(meal: meal)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(meal.mealType.rawValue.uppercased()).font(.caption2.weight(.bold)).foregroundStyle(AppTheme.accent)
                     Text(meal.name).font(.headline)
@@ -249,17 +277,40 @@ private struct MealCard: View {
                 Spacer()
                 Image(systemName: "chevron.right").font(.caption.weight(.bold)).foregroundStyle(.tertiary)
             }.padding(14).background(.background, in: RoundedRectangle(cornerRadius: 16))
-        }.buttonStyle(.plain)
+    }
+}
+
+struct MealThumbnail: View {
+    let meal: Meal
+
+    var body: some View {
+        Group {
+            if let imageData = meal.imageData, let image = UIImage(data: imageData) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                Image(systemName: meal.mealType == .breakfast ? "sunrise.fill" : "fork.knife")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.accent)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(AppTheme.accent.opacity(0.12))
+            }
+        }
+        .frame(width: 42, height: 42)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
 
 private struct MealEditor: View {
     @Environment(\.dismiss) private var dismiss
-    let meal: Meal; let save: (Meal) -> Void
+    let meal: Meal
+    let save: (Meal) -> Void
+    let delete: (Meal) -> Void
     @State private var name: String; @State private var mealType: MealType; @State private var quantity: Double
     @State private var calories: Int; @State private var protein: Int; @State private var carbs: Int; @State private var fat: Int
-    init(meal: Meal, save: @escaping (Meal) -> Void) {
-        self.meal = meal; self.save = save
+    init(meal: Meal, save: @escaping (Meal) -> Void, delete: @escaping (Meal) -> Void) {
+        self.meal = meal; self.save = save; self.delete = delete
         _name = State(initialValue: meal.name); _mealType = State(initialValue: meal.mealType); _quantity = State(initialValue: meal.quantity)
         _calories = State(initialValue: meal.calories); _protein = State(initialValue: meal.protein); _carbs = State(initialValue: meal.carbs); _fat = State(initialValue: meal.fat)
     }
@@ -277,13 +328,22 @@ private struct MealEditor: View {
                     numberField("Carbs", value: $carbs, unit: "g")
                     numberField("Fat", value: $fat, unit: "g")
                 }
+                Section {
+                    Button(role: .destructive) {
+                        delete(meal)
+                        dismiss()
+                    } label: {
+                        Label("Delete Meal", systemImage: "trash")
+                            .frame(maxWidth: .infinity)
+                    }
+                }
             }
             .navigationTitle("Edit meal").navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        save(Meal(id: meal.id, name: name, detail: meal.detail, mealType: mealType, quantity: quantity, calories: calories, protein: protein, carbs: carbs, fat: fat, date: meal.date)); dismiss()
+                        save(Meal(id: meal.id, name: name, detail: meal.detail, mealType: mealType, quantity: quantity, calories: calories, protein: protein, carbs: carbs, fat: fat, date: meal.date, imageData: meal.imageData)); dismiss()
                     }
                 }
             }

@@ -41,8 +41,9 @@ struct Meal: Identifiable, Codable, Equatable {
     var carbs: Int
     var fat: Int
     var date: Date
+    var imageData: Data?
 
-    init(id: UUID = UUID(), name: String, detail: String, mealType: MealType, quantity: Double, calories: Int, protein: Int, carbs: Int, fat: Int, date: Date) {
+    init(id: UUID = UUID(), name: String, detail: String, mealType: MealType, quantity: Double, calories: Int, protein: Int, carbs: Int, fat: Int, date: Date, imageData: Data? = nil) {
         self.id = id
         self.name = name
         self.detail = detail
@@ -53,6 +54,7 @@ struct Meal: Identifiable, Codable, Equatable {
         self.carbs = carbs
         self.fat = fat
         self.date = date
+        self.imageData = imageData
     }
 
     static let sample: [Meal] = [

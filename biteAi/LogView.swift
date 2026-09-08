@@ -164,10 +164,7 @@ private struct LoggedMealCard: View {
 
     var body: some View {
         HStack(spacing: 13) {
-            Image(systemName: meal.mealType == .breakfast ? "sunrise.fill" : "fork.knife")
-                .foregroundStyle(AppTheme.accent)
-                .frame(width: 42, height: 42)
-                .background(AppTheme.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+            MealThumbnail(meal: meal)
             VStack(alignment: .leading, spacing: 4) {
                 Text(meal.mealType.rawValue.uppercased())
                     .font(.caption2.weight(.bold))

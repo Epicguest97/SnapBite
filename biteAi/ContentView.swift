@@ -17,13 +17,15 @@ struct ContentView: View {
         NavigationStack {
             VStack(spacing: 25) {
                 
-                VStack(spacing: 8) {
-                    Text("BiteAI")
-                        .font(.system(size: 36, weight: .bold))
-                    
-                    Text("Snap your food. Know your nutrition.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                if capturedImage == nil {
+                    VStack(spacing: 8) {
+                        Text("BiteAI")
+                            .font(.system(size: 36, weight: .bold))
+                        
+                        Text("Snap your food. Know your nutrition.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 
                 Spacer()
@@ -89,16 +91,12 @@ private enum AppTab: String, CaseIterable {
     case today = "Today"
     case log = "Log"
     case scan = "Scan"
-    case insights = "Insights"
-    case goals = "Goals"
 
     var icon: String {
         switch self {
         case .today: "flame"
         case .log: "book"
         case .scan: "viewfinder"
-        case .insights: "chart.line.uptrend.xyaxis"
-        case .goals: "slider.horizontal.3"
         }
     }
 }
@@ -112,7 +110,6 @@ private struct AppTabBar: View {
     var body: some View {
         HStack(alignment: .bottom, spacing: 0) {
             tabButton(.today)
-            tabButton(.log)
 
             Button {
                 selectedTab = .scan
@@ -132,8 +129,7 @@ private struct AppTabBar: View {
             .accessibilityLabel("Scan food")
             .offset(y: -25)
 
-            tabButton(.insights)
-            tabButton(.goals)
+            tabButton(.log)
         }
         .padding(.horizontal, 12)
         .padding(.top, 10)

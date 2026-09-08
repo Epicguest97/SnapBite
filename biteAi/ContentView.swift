@@ -25,7 +25,7 @@ struct ContentView: View {
                 case .scan:
                     ScanView(image: capturedImage, foods: $detectedFoods, mealType: $selectedMealType, openCamera: startScan, logFood: logFood)
                 case .log:
-                    LogView(meals: meals) { mealBeingEdited = $0 }
+                    LogView(meals: meals, goals: goals)
                 }
             }
             .background(Color(uiColor: .systemGroupedBackground))
@@ -230,36 +230,6 @@ private struct DetectedFoodRow: View {
             }
             Stepper("Quantity", value: $food.quantity, in: 20...600, step: 10).labelsHidden()
         }.padding(16).background(.background, in: RoundedRectangle(cornerRadius: 16))
-    }
-}
-
-private struct LogView: View {
-    let meals: [Meal]; let editMeal: (Meal) -> Void
-    private var groupedMeals: [(date: Date, meals: [Meal])] {
-        Dictionary(grouping: meals) { Calendar.current.startOfDay(for: $0.date) }
-            .map { (date: $0.key, meals: $0.value.sorted { $0.date > $1.date }) }
-            .sorted { $0.date > $1.date }
-    }
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                VStack(alignment: .leading, spacing: 5) {
-                    Text("Log").font(.largeTitle.bold())
-                    Text("Your meals by day").foregroundStyle(.secondary)
-                }
-                ForEach(groupedMeals, id: \.date) { group in
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text(sectionTitle(group.date)).font(.headline).foregroundStyle(.secondary)
-                        ForEach(group.meals) { meal in MealCard(meal: meal) { editMeal(meal) } }
-                    }
-                }
-            }.padding(20).padding(.bottom, 18)
-        }
-    }
-    private func sectionTitle(_ date: Date) -> String {
-        if Calendar.current.isDateInToday(date) { return "Today" }
-        if Calendar.current.isDateInYesterday(date) { return "Yesterday" }
-        return date.formatted(date: .abbreviated, time: .omitted)
     }
 }
 

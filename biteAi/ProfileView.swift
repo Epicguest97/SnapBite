@@ -3,9 +3,34 @@ import SwiftUI
 struct ProfileView: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var goals: NutritionGoals
+    let profiles: [Profile]
+    let activeProfileID: UUID
+    let switchProfile: (Profile) -> Void
 
     var body: some View {
         Form {
+            Section("Profiles") {
+                ForEach(profiles) { profile in
+                    Button {
+                        switchProfile(profile)
+                    } label: {
+                        HStack {
+                            Text(profile.name)
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            if profile.id == activeProfileID {
+                                Image(systemName: "checkmark")
+                                    .foregroundStyle(AppTheme.accent)
+                            }
+                        }
+                    }
+                    .simultaneousGesture(
+                        TapGesture(count: 2)
+                            .onEnded { switchProfile(profile) }
+                    )
+                }
+            }
+
             Section {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Nutrition goals")
@@ -60,6 +85,7 @@ struct ProfileView: View {
 
 struct ProfileButton: View {
     let action: () -> Void
+    let doubleTapAction: () -> Void
 
     var body: some View {
         Button(action: action) {
@@ -70,7 +96,8 @@ struct ProfileButton: View {
                 .background(AppTheme.accent.opacity(0.13), in: Circle())
         }
         .accessibilityLabel("Profile and goals")
+        .onTapGesture(count: 2, perform: doubleTapAction)
         .padding(.top, 20)
-        .padding(.trailing, 20)
+        .padding(Edge.Set.trailing, 20)
     }
 }

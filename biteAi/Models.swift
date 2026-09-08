@@ -67,7 +67,7 @@ struct Meal: Identifiable, Codable, Equatable {
 
 struct DetectedFood: Identifiable {
     let id = UUID()
-    let name: String
+    var name: String
     let estimatedQuantity: Double
     var quantity: Double
     let baseCalories, baseProtein, baseCarbs, baseFat: Int
@@ -108,6 +108,20 @@ struct NutritionGoals: Codable, Equatable {
     }
 }
 
+struct Profile: Identifiable, Codable, Equatable {
+    let id: UUID
+    var name: String
+    var meals: [Meal]
+    var goals: NutritionGoals
+
+    init(id: UUID = UUID(), name: String, meals: [Meal], goals: NutritionGoals) {
+        self.id = id
+        self.name = name
+        self.meals = meals
+        self.goals = goals
+    }
+}
+
 enum MealStore {
     private static let storageKey = "savedMeals"
 
@@ -139,6 +153,65 @@ enum GoalsStore {
     static func save(_ goals: NutritionGoals) {
         guard let data = try? JSONEncoder().encode(goals) else { return }
         UserDefaults.standard.set(data, forKey: storageKey)
+    }
+}
+
+enum ProfileStore {
+    private static let storageKey = "profiles"
+    private static let activeProfileKey = "activeProfileID"
+    private static var fileURL: URL {
+        let directory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("biteAi", isDirectory: true)
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return directory.appendingPathComponent("profiles.json")
+    }
+
+    static func load() -> [Profile] {
+        if let data = try? Data(contentsOf: fileURL),
+           let profiles = try? JSONDecoder().decode([Profile].self, from: data),
+           !profiles.isEmpty {
+            return profiles
+        }
+
+        if let data = UserDefaults.standard.data(forKey: storageKey),
+           let profiles = try? JSONDecoder().decode([Profile].self, from: data),
+           !profiles.isEmpty {
+            save(profiles)
+            removeLegacyStorage()
+            return profiles
+        }
+
+        let profiles = [
+            Profile(name: "test", meals: MealStore.load(), goals: GoalsStore.load()),
+            Profile(name: "mehul", meals: [], goals: NutritionGoals())
+        ]
+        save(profiles)
+        removeLegacyStorage()
+        return profiles
+    }
+
+    static func save(_ profiles: [Profile]) {
+        guard let data = try? JSONEncoder().encode(profiles) else { return }
+        try? data.write(to: fileURL, options: .atomic)
+    }
+
+    private static func removeLegacyStorage() {
+        UserDefaults.standard.removeObject(forKey: storageKey)
+        UserDefaults.standard.removeObject(forKey: "savedMeals")
+        UserDefaults.standard.removeObject(forKey: "nutritionGoals")
+    }
+
+    static func loadActiveProfileID(from profiles: [Profile]) -> UUID {
+        if let value = UserDefaults.standard.string(forKey: activeProfileKey),
+           let id = UUID(uuidString: value),
+           profiles.contains(where: { $0.id == id }) {
+            return id
+        }
+        return profiles[0].id
+    }
+
+    static func saveActiveProfileID(_ id: UUID) {
+        UserDefaults.standard.set(id.uuidString, forKey: activeProfileKey)
     }
 }
 

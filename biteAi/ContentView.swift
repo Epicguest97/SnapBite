@@ -6,14 +6,22 @@ struct ContentView: View {
     @State private var capturedImage: UIImage?
     @State private var detectedFoods = DetectedFood.sample
     @State private var selectedMealType: MealType = .lunch
+    @State private var mealName = "Chicken rice bowl"
     @State private var meals: [Meal]
     @State private var mealBeingEdited: Meal?
     @State private var goals: NutritionGoals
     @State private var showProfile = false
+    @State private var profiles: [Profile]
+    @State private var activeProfileID: UUID
 
     init() {
-        _meals = State(initialValue: MealStore.load())
-        _goals = State(initialValue: GoalsStore.load())
+        let loadedProfiles = ProfileStore.load()
+        let loadedActiveProfileID = ProfileStore.loadActiveProfileID(from: loadedProfiles)
+        let activeProfile = loadedProfiles.first(where: { $0.id == loadedActiveProfileID }) ?? loadedProfiles[0]
+        _profiles = State(initialValue: loadedProfiles)
+        _activeProfileID = State(initialValue: activeProfile.id)
+        _meals = State(initialValue: activeProfile.meals)
+        _goals = State(initialValue: activeProfile.goals)
     }
 
     var body: some View {
@@ -28,7 +36,7 @@ struct ContentView: View {
                         deleteMeal: deleteMeal
                     )
                 case .scan:
-                    ScanView(image: capturedImage, foods: $detectedFoods, mealType: $selectedMealType, openCamera: startScan, logFood: logFood)
+                    ScanView(image: capturedImage, foods: $detectedFoods, mealName: $mealName, mealType: $selectedMealType, openCamera: startScan, logFood: logFood)
                 case .log:
                     LogView(meals: meals, goals: goals)
                 }
@@ -48,17 +56,25 @@ struct ContentView: View {
             }
             .sheet(isPresented: $showProfile) {
                 NavigationStack {
-                    ProfileView(goals: $goals)
+                    ProfileView(
+                        goals: $goals,
+                        profiles: profiles,
+                        activeProfileID: activeProfileID,
+                        switchProfile: switchProfile
+                    )
                 }
             }
             .onChange(of: meals) { _, updatedMeals in
-                MealStore.save(updatedMeals)
+                updateActiveProfile()
             }
             .onChange(of: goals) { _, updatedGoals in
-                GoalsStore.save(updatedGoals)
+                updateActiveProfile()
             }
             .overlay(alignment: .topTrailing) {
-                ProfileButton { showProfile = true }
+                ProfileButton(
+                    action: { showProfile = true },
+                    doubleTapAction: switchToNextProfile
+                )
             }
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 AppTabBar(selectedTab: $selectedTab, scanAction: startScan)
@@ -69,6 +85,7 @@ struct ContentView: View {
     private func startScan() {
         capturedImage = nil
         detectedFoods = DetectedFood.sample
+        mealName = "Chicken rice bowl"
         selectedTab = .scan
         showCamera = true
     }
@@ -77,7 +94,7 @@ struct ContentView: View {
         let photoData = capturedImage?.jpegData(compressionQuality: 0.8)
         meals.insert(
             Meal(
-                name: "Chicken rice bowl",
+                name: mealName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Chicken rice bowl" : mealName.trimmingCharacters(in: .whitespacesAndNewlines),
                 detail: "AI scan • \(detectedFoods.count) foods",
                 mealType: selectedMealType,
                 quantity: detectedFoods.reduce(0) { $0 + $1.quantity },
@@ -96,6 +113,28 @@ struct ContentView: View {
 
     private func deleteMeal(_ meal: Meal) {
         meals.removeAll { $0.id == meal.id }
+    }
+
+    private func switchProfile(_ profile: Profile) {
+        updateActiveProfile()
+        activeProfileID = profile.id
+        meals = profile.meals
+        goals = profile.goals
+        ProfileStore.saveActiveProfileID(profile.id)
+    }
+
+    private func switchToNextProfile() {
+        guard profiles.count > 1,
+              let activeIndex = profiles.firstIndex(where: { $0.id == activeProfileID }) else { return }
+        let nextIndex = (activeIndex + 1) % profiles.count
+        switchProfile(profiles[nextIndex])
+    }
+
+    private func updateActiveProfile() {
+        guard let index = profiles.firstIndex(where: { $0.id == activeProfileID }) else { return }
+        profiles[index].meals = meals
+        profiles[index].goals = goals
+        ProfileStore.save(profiles)
     }
 }
 
@@ -170,9 +209,11 @@ private struct CalorieSummary: View {
 private struct ScanView: View {
     let image: UIImage?
     @Binding var foods: [DetectedFood]
+    @Binding var mealName: String
     @Binding var mealType: MealType
     let openCamera: () -> Void
     let logFood: () -> Void
+    @State private var showAddFood = false
     private var calories: Int { foods.reduce(0) { $0 + $1.calories } }
     private var protein: Int { foods.reduce(0) { $0 + $1.protein } }
     private var carbs: Int { foods.reduce(0) { $0 + $1.carbs } }
@@ -192,8 +233,25 @@ private struct ScanView: View {
                         Button("Retake", action: openCamera).font(.subheadline.weight(.semibold))
                     }
                     NutritionTotal(calories: calories, protein: protein, carbs: carbs, fat: fat)
-                    Text("Detected foods").font(.title3.bold())
-                    ForEach($foods) { $food in DetectedFoodRow(food: $food) }
+                    HStack {
+                        Text("Detected foods").font(.title3.bold())
+                        Spacer()
+                        Button {
+                            showAddFood = true
+                        } label: {
+                            Label("Add food", systemImage: "plus")
+                                .font(.subheadline.weight(.semibold))
+                        }
+                    }
+                    ForEach($foods) { $food in
+                        DetectedFoodRow(food: $food) {
+                            foods.removeAll { $0.id == food.id }
+                        }
+                    }
+                    TextField("Meal name", text: $mealName)
+                        .textInputAutocapitalization(.words)
+                        .padding(.horizontal, 16).padding(.vertical, 13)
+                        .background(.background, in: RoundedRectangle(cornerRadius: 14))
                     Picker("Meal type", selection: $mealType) {
                         ForEach(MealType.allCases) { Text($0.rawValue).tag($0) }
                     }
@@ -214,6 +272,11 @@ private struct ScanView: View {
                     }.frame(maxWidth: .infinity)
                 }
             }.padding(20).padding(.bottom, 18)
+        }
+        .sheet(isPresented: $showAddFood) {
+            AddFoodView { food in
+                foods.append(food)
+            }
         }
     }
 }
@@ -249,6 +312,8 @@ private struct MacroValue: View {
 
 private struct DetectedFoodRow: View {
     @Binding var food: DetectedFood
+    let remove: () -> Void
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -258,9 +323,74 @@ private struct DetectedFoodRow: View {
                 }
                 Spacer()
                 Text("\(Int(food.quantity))g").font(.headline)
+                Button(role: .destructive, action: remove) {
+                    Image(systemName: "trash")
+                        .font(.subheadline)
+                }
+                .accessibilityLabel("Remove \(food.name)")
             }
             Stepper("Quantity", value: $food.quantity, in: 20...600, step: 10).labelsHidden()
         }.padding(16).background(.background, in: RoundedRectangle(cornerRadius: 16))
+    }
+}
+
+private struct AddFoodView: View {
+    @Environment(\.dismiss) private var dismiss
+    let addFood: (DetectedFood) -> Void
+    @State private var name = ""
+    @State private var quantity = 100.0
+    @State private var calories = 100
+    @State private var protein = 0
+    @State private var carbs = 0
+    @State private var fat = 0
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Food") {
+                    TextField("Food name", text: $name)
+                    numberField("Quantity", value: $quantity, unit: "g", decimal: true)
+                }
+                Section("Nutrition") {
+                    numberField("Calories", value: $calories, unit: "kcal")
+                    numberField("Protein", value: $protein, unit: "g")
+                    numberField("Carbs", value: $carbs, unit: "g")
+                    numberField("Fat", value: $fat, unit: "g")
+                }
+            }
+            .navigationTitle("Add food")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Add") {
+                        addFood(
+                            DetectedFood(
+                                name: name.trimmingCharacters(in: .whitespacesAndNewlines),
+                                estimatedQuantity: quantity,
+                                quantity: quantity,
+                                baseCalories: calories,
+                                baseProtein: protein,
+                                baseCarbs: carbs,
+                                baseFat: fat
+                            )
+                        )
+                        dismiss()
+                    }
+                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+        }
+    }
+
+    private func numberField(_ title: String, value: Binding<Int>, unit: String) -> some View {
+        HStack { Text(title); Spacer(); TextField(title, value: value, format: .number).keyboardType(.numberPad).multilineTextAlignment(.trailing); Text(unit).foregroundStyle(.secondary) }
+    }
+
+    private func numberField(_ title: String, value: Binding<Double>, unit: String, decimal: Bool) -> some View {
+        HStack { Text(title); Spacer(); TextField(title, value: value, format: .number).keyboardType(.decimalPad).multilineTextAlignment(.trailing); Text(unit).foregroundStyle(.secondary) }
     }
 }
 

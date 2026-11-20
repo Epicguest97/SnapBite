@@ -70,7 +70,7 @@ struct DetectedFood: Identifiable {
     var name: String
     let estimatedQuantity: Double
     var quantity: Double
-    let baseCalories, baseProtein, baseCarbs, baseFat: Int
+    var baseCalories, baseProtein, baseCarbs, baseFat: Int
 
     private var multiplier: Double { quantity / estimatedQuantity }
     var calories: Int { Int((Double(baseCalories) * multiplier).rounded()) }

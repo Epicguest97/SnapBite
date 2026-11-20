@@ -1,12 +1,20 @@
 import SwiftUI
+import Roboflow
 
 struct ContentView: View {
     @State private var selectedTab: AppTab = .today
     @State private var showCamera = false
+    @State private var showModelSettings = false
+    @AppStorage("roboflowAPIKey") private var apiKey = ""
+    @AppStorage("roboflowModelID") private var modelID = "indianfoodnet-7mpua"
+    @AppStorage("roboflowModelVersion") private var modelVersion = "2"
+    @State private var scanMessage = ""
+    @State private var scanning = false
+    @State private var scanID = UUID()
     @State private var capturedImage: UIImage?
-    @State private var detectedFoods = DetectedFood.sample
+    @State private var detectedFoods: [DetectedFood] = []
     @State private var selectedMealType: MealType = .lunch
-    @State private var mealName = "Chicken rice bowl"
+    @State private var mealName = ""
     @State private var meals: [Meal]
     @State private var mealBeingEdited: Meal?
     @State private var goals: NutritionGoals
@@ -36,7 +44,7 @@ struct ContentView: View {
                         deleteMeal: deleteMeal
                     )
                 case .scan:
-                    ScanView(image: capturedImage, foods: $detectedFoods, mealName: $mealName, mealType: $selectedMealType, openCamera: startScan, logFood: logFood)
+                    ScanView(image: capturedImage, foods: $detectedFoods, mealName: $mealName, mealType: $selectedMealType, openCamera: startScan, logFood: logFood, scanning: scanning, scanMessage: scanMessage, openSettings: { showModelSettings = true })
                 case .log:
                     LogView(meals: meals, goals: goals)
                 }
@@ -44,6 +52,27 @@ struct ContentView: View {
             .background(Color(uiColor: .systemGroupedBackground))
             .navigationBarHidden(true)
             .sheet(isPresented: $showCamera) { ImagePicker(image: $capturedImage) }
+            .sheet(isPresented: $showModelSettings) {
+                NavigationStack {
+                    Form {
+                        TextField("Model project ID", text: $modelID).textInputAutocapitalization(.never).autocorrectionDisabled()
+                        TextField("Model version", text: $modelVersion).keyboardType(.numberPad)
+                        SecureField("Roboflow API key", text: $apiKey).textInputAutocapitalization(.never).autocorrectionDisabled()
+                        Text("The key is stored on this device. Use a restricted key appropriate for a mobile app.").font(.caption).foregroundStyle(.secondary)
+                    }
+                    .navigationTitle("Roboflow model")
+                    .toolbar { Button("Done") { showModelSettings = false; if let image = capturedImage { detectFood(in: image) } } }
+                }
+            }
+            .onAppear {
+                if modelID == "kitchen-intelligent-assistant" && modelVersion == "53" {
+                    modelID = "indianfoodnet-7mpua"
+                    modelVersion = "2"
+                }
+            }
+            .onChange(of: capturedImage) { _, image in
+                if let image { detectFood(in: image) }
+            }
             .sheet(item: $mealBeingEdited) { meal in
                 MealEditor(
                     meal: meal,
@@ -84,17 +113,61 @@ struct ContentView: View {
 
     private func startScan() {
         capturedImage = nil
-        detectedFoods = DetectedFood.sample
-        mealName = "Chicken rice bowl"
+        detectedFoods = []
+        scanID = UUID()
+        scanning = false
+        scanMessage = ""
+        mealName = ""
         selectedTab = .scan
         showCamera = true
+    }
+
+    private func detectFood(in image: UIImage) {
+        let id = UUID()
+        scanID = id
+        detectedFoods = []
+        guard !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              !modelID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              let version = Int(modelVersion), version > 0 else {
+            scanning = false
+            scanMessage = "Add your Roboflow model details to detect food."
+            return
+        }
+        scanning = true
+        scanMessage = "Loading model and analyzing photo…"
+        let roboflow = RoboflowMobile(apiKey: apiKey.trimmingCharacters(in: .whitespacesAndNewlines))
+        roboflow.load(model: modelID.trimmingCharacters(in: .whitespacesAndNewlines), modelVersion: version) { model, error, _, _ in
+            guard let model, error == nil else {
+                DispatchQueue.main.async {
+                    guard scanID == id else { return }
+                    scanning = false
+                    scanMessage = "Could not load the model: \(error?.localizedDescription ?? "Unknown error")"
+                }
+                return
+            }
+            model.configure(threshold: 0.5, overlap: 0.4, maxObjects: 20)
+            model.detect(image: image) { predictions, error in
+                let names = (predictions ?? []).compactMap { ($0 as? RFObjectDetectionPrediction)?.className }
+                DispatchQueue.main.async {
+                    guard scanID == id else { return }
+                    scanning = false
+                    if let error {
+                        scanMessage = "Could not analyze the photo: \(error.localizedDescription)"
+                        return
+                    }
+                    detectedFoods = names.map { DetectedFood(name: $0, estimatedQuantity: 100, quantity: 100, baseCalories: 0, baseProtein: 0, baseCarbs: 0, baseFat: 0) }
+                    mealName = names.first ?? ""
+                    scanMessage = names.isEmpty ? "No food detected. You can add food manually or retake the photo." : "Enter nutrition values and adjust the placeholder portions before logging."
+                }
+            }
+        }
     }
 
     private func logFood() {
         let photoData = capturedImage?.jpegData(compressionQuality: 0.8)
         meals.insert(
             Meal(
-                name: mealName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Chicken rice bowl" : mealName.trimmingCharacters(in: .whitespacesAndNewlines),
+                name: mealName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Meal" : mealName.trimmingCharacters(in: .whitespacesAndNewlines),
                 detail: "AI scan • \(detectedFoods.count) foods",
                 mealType: selectedMealType,
                 quantity: detectedFoods.reduce(0) { $0 + $1.quantity },
@@ -213,6 +286,9 @@ private struct ScanView: View {
     @Binding var mealType: MealType
     let openCamera: () -> Void
     let logFood: () -> Void
+    let scanning: Bool
+    let scanMessage: String
+    let openSettings: () -> Void
     @State private var showAddFood = false
     private var calories: Int { foods.reduce(0) { $0 + $1.calories } }
     private var protein: Int { foods.reduce(0) { $0 + $1.protein } }
@@ -232,6 +308,9 @@ private struct ScanView: View {
                         Spacer()
                         Button("Retake", action: openCamera).font(.subheadline.weight(.semibold))
                     }
+                    if scanning { ProgressView(scanMessage) }
+                    else if !scanMessage.isEmpty { Text(scanMessage).font(.subheadline).foregroundStyle(.secondary) }
+                    Button("Model settings", action: openSettings).font(.subheadline)
                     NutritionTotal(calories: calories, protein: protein, carbs: carbs, fat: fat)
                     HStack {
                         Text("Detected foods").font(.title3.bold())
@@ -261,6 +340,7 @@ private struct ScanView: View {
                         Label("Log Food", systemImage: "checkmark").font(.headline).frame(maxWidth: .infinity).padding(.vertical, 17)
                     }
                     .buttonStyle(.borderedProminent).tint(AppTheme.accent)
+                    .disabled(scanning || foods.isEmpty)
                 } else {
                     Spacer(minLength: 56)
                     VStack(spacing: 18) {
@@ -289,7 +369,7 @@ private struct NutritionTotal: View {
                 Text("\(calories)").font(.system(size: 34, weight: .bold, design: .rounded))
                 Text("kcal").foregroundStyle(.secondary)
                 Spacer()
-                Text("AI estimate").font(.caption.weight(.semibold)).foregroundStyle(AppTheme.accent)
+                Text("Nutrition entered").font(.caption.weight(.semibold)).foregroundStyle(AppTheme.accent)
             }
             HStack {
                 MacroValue(title: "Protein", value: protein, color: .blue)
@@ -330,7 +410,20 @@ private struct DetectedFoodRow: View {
                 .accessibilityLabel("Remove \(food.name)")
             }
             Stepper("Quantity", value: $food.quantity, in: 20...600, step: 10).labelsHidden()
+            Text("Nutrition for \(Int(food.estimatedQuantity)) g").font(.caption).foregroundStyle(.secondary)
+            HStack {
+                nutritionField("kcal", value: $food.baseCalories)
+                nutritionField("Protein", value: $food.baseProtein)
+                nutritionField("Carbs", value: $food.baseCarbs)
+                nutritionField("Fat", value: $food.baseFat)
+            }
         }.padding(16).background(.background, in: RoundedRectangle(cornerRadius: 16))
+    }
+    private func nutritionField(_ title: String, value: Binding<Int>) -> some View {
+        VStack(alignment: .leading) {
+            Text(title).font(.caption2).foregroundStyle(.secondary)
+            TextField(title, value: value, format: .number).keyboardType(.numberPad).textFieldStyle(.roundedBorder)
+        }
     }
 }
 

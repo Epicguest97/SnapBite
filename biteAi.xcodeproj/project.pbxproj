@@ -6,8 +6,15 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		ADBA9D6D551C9A75F2525F00 /* Pods_biteAi.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1C6B184BB70D66EE996B0A8F /* Pods_biteAi.framework */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
+		1C6B184BB70D66EE996B0A8F /* Pods_biteAi.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_biteAi.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		2AED0E1D3050064600BC8C11 /* biteAi.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = biteAi.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		930CEB05361E0A3D9FD998A8 /* Pods-biteAi.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-biteAi.release.xcconfig"; path = "Target Support Files/Pods-biteAi/Pods-biteAi.release.xcconfig"; sourceTree = "<group>"; };
+		E89939F0B4590F39AB5E3262 /* Pods-biteAi.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-biteAi.debug.xcconfig"; path = "Target Support Files/Pods-biteAi/Pods-biteAi.debug.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -36,17 +43,29 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				ADBA9D6D551C9A75F2525F00 /* Pods_biteAi.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		115CA3902ADC5063435D0D85 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				E89939F0B4590F39AB5E3262 /* Pods-biteAi.debug.xcconfig */,
+				930CEB05361E0A3D9FD998A8 /* Pods-biteAi.release.xcconfig */,
+			);
+			path = Pods;
+			sourceTree = "<group>";
+		};
 		2AED0E143050064600BC8C11 = {
 			isa = PBXGroup;
 			children = (
 				2AED0E1F3050064600BC8C11 /* biteAi */,
 				2AED0E1E3050064600BC8C11 /* Products */,
+				115CA3902ADC5063435D0D85 /* Pods */,
+				32476C123DBBC1A34427744C /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -58,6 +77,14 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		32476C123DBBC1A34427744C /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				1C6B184BB70D66EE996B0A8F /* Pods_biteAi.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -65,9 +92,11 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 2AED0E283050064800BC8C11 /* Build configuration list for PBXNativeTarget "biteAi" */;
 			buildPhases = (
+				0525B27AFB11105BF7333ABE /* [CP] Check Pods Manifest.lock */,
 				2AED0E193050064600BC8C11 /* Sources */,
 				2AED0E1A3050064600BC8C11 /* Frameworks */,
 				2AED0E1B3050064600BC8C11 /* Resources */,
+				8568A6B8757720AAFBD7D114 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -77,8 +106,6 @@
 				2AED0E1F3050064600BC8C11 /* biteAi */,
 			);
 			name = biteAi;
-			packageProductDependencies = (
-			);
 			productName = biteAi;
 			productReference = 2AED0E1D3050064600BC8C11 /* biteAi.app */;
 			productType = "com.apple.product-type.application";
@@ -91,7 +118,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2630;
-				LastUpgradeCheck = 2630;
+				LastUpgradeCheck = 2710;
 				TargetAttributes = {
 					2AED0E1C3050064600BC8C11 = {
 						CreatedOnToolsVersion = 26.3;
@@ -126,6 +153,52 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		0525B27AFB11105BF7333ABE /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-biteAi-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		8568A6B8757720AAFBD7D114 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-biteAi/Pods-biteAi-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			inputPaths = (
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-biteAi/Pods-biteAi-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-biteAi/Pods-biteAi-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		2AED0E193050064600BC8C11 /* Sources */ = {
@@ -176,7 +249,7 @@
 				DEVELOPMENT_TEAM = 6Y3UP5398T;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -197,6 +270,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -240,7 +314,7 @@
 				DEVELOPMENT_TEAM = 6Y3UP5398T;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -254,6 +328,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
 			};
@@ -261,6 +336,7 @@
 		};
 		2AED0E293050064800BC8C11 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = E89939F0B4590F39AB5E3262 /* Pods-biteAi.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -271,6 +347,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = biteAi/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "inBiteAI uses the camera to analyze your food.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "inBiteAI uses your photo library to select a food photo.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -295,6 +372,7 @@
 		};
 		2AED0E2A3050064800BC8C11 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 930CEB05361E0A3D9FD998A8 /* Pods-biteAi.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -305,6 +383,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = biteAi/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "inBiteAI uses the camera to analyze your food.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "inBiteAI uses your photo library to select a food photo.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

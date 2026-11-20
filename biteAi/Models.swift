@@ -2,21 +2,25 @@ import Foundation
 import SwiftUI
 
 enum AppTab {
-    case today, scan, log
+    case today, scan, log, plans, profile
 
     var title: String {
         switch self {
-        case .today: "Today"
+        case .today: "Home"
         case .scan: "Scan"
-        case .log: "Log"
+        case .log: "Stats"
+        case .plans: "Plans"
+        case .profile: "You"
         }
     }
 
     var icon: String {
         switch self {
-        case .today: "sun.max.fill"
+        case .today: "house"
         case .scan: "viewfinder"
-        case .log: "book"
+        case .log: "chart.bar"
+        case .plans: "book"
+        case .profile: "person"
         }
     }
 }
@@ -28,6 +32,15 @@ enum MealType: String, CaseIterable, Identifiable, Codable {
     case snack = "Snack"
 
     var id: String { rawValue }
+
+    static func forTime(_ date: Date) -> MealType {
+        switch Calendar.current.component(.hour, from: date) {
+        case 5..<11: return .breakfast
+        case 11..<15: return .lunch
+        case 17..<22: return .dinner
+        default: return .snack
+        }
+    }
 }
 
 struct Meal: Identifiable, Codable, Equatable {
@@ -42,8 +55,10 @@ struct Meal: Identifiable, Codable, Equatable {
     var fat: Int
     var date: Date
     var imageData: Data?
+    var foods: [DetectedFood]?
+    var nutritionEstimateVersion: Int?
 
-    init(id: UUID = UUID(), name: String, detail: String, mealType: MealType, quantity: Double, calories: Int, protein: Int, carbs: Int, fat: Int, date: Date, imageData: Data? = nil) {
+    init(id: UUID = UUID(), name: String, detail: String, mealType: MealType, quantity: Double, calories: Int, protein: Int, carbs: Int, fat: Int, date: Date, imageData: Data? = nil, foods: [DetectedFood]? = nil, nutritionEstimateVersion: Int? = nil) {
         self.id = id
         self.name = name
         self.detail = detail
@@ -55,6 +70,8 @@ struct Meal: Identifiable, Codable, Equatable {
         self.fat = fat
         self.date = date
         self.imageData = imageData
+        self.foods = foods
+        self.nutritionEstimateVersion = nutritionEstimateVersion
     }
 
     static let sample: [Meal] = [
@@ -65,14 +82,28 @@ struct Meal: Identifiable, Codable, Equatable {
     ]
 }
 
-struct DetectedFood: Identifiable {
-    let id = UUID()
+struct DetectedFood: Identifiable, Codable, Equatable {
+    var id = UUID()
     var name: String
     let estimatedQuantity: Double
     var quantity: Double
     var baseCalories, baseProtein, baseCarbs, baseFat: Int
+    var baseFiber: Double? = nil
+    var baseVitaminC: Double? = nil
+    var baseIron: Double? = nil
+    var baseSodium: Double? = nil
+    var baseSugar: Double? = nil
+    var baseVitaminA: Double? = nil
+    var baseFolate: Double? = nil
 
     private var multiplier: Double { quantity / estimatedQuantity }
+    var fiber: Double? { baseFiber.map { $0 * multiplier } }
+    var vitaminC: Double? { baseVitaminC.map { $0 * multiplier } }
+    var iron: Double? { baseIron.map { $0 * multiplier } }
+    var sodium: Double? { baseSodium.map { $0 * multiplier } }
+    var sugar: Double? { baseSugar.map { $0 * multiplier } }
+    var vitaminA: Double? { baseVitaminA.map { $0 * multiplier } }
+    var folate: Double? { baseFolate.map { $0 * multiplier } }
     var calories: Int { Int((Double(baseCalories) * multiplier).rounded()) }
     var protein: Int { Int((Double(baseProtein) * multiplier).rounded()) }
     var carbs: Int { Int((Double(baseCarbs) * multiplier).rounded()) }
@@ -216,5 +247,63 @@ enum ProfileStore {
 }
 
 enum AppTheme {
-    static let accent = Color(red: 0.04, green: 0.55, blue: 0.36)
+    static let canvas = Color(red: 246/255, green: 243/255, blue: 233/255)
+    static let foreground = Color(red: 28/255, green: 43/255, blue: 31/255)
+    static let border = Color(red: 229/255, green: 221/255, blue: 198/255)
+    static let primaryForeground = Color.white
+    static let secondary = Color(red: 231/255, green: 240/255, blue: 213/255)
+    static let accent = Color(red: 46/255, green: 125/255, blue: 50/255)
+    static let muted = Color(red: 237/255, green: 232/255, blue: 214/255)
+    static let mutedForeground = Color(red: 122/255, green: 127/255, blue: 106/255)
+    static let orange = Color(red: 255/255, green: 107/255, blue: 44/255)
+    static let forest = Color(red: 27/255, green: 67/255, blue: 50/255)
+    static let card = Color(red: 255/255, green: 253/255, blue: 245/255)
+    static let protein = Color(red: 46/255, green: 125/255, blue: 50/255)
+    static let carbs = Color(red: 233/255, green: 160/255, blue: 0)
+    static let fats = Color(red: 122/255, green: 143/255, blue: 245/255)
+    static let blush = Color(red: 255/255, green: 232/255, blue: 214/255)
+    static let sun = Color(red: 242/255, green: 169/255, blue: 0)
+}
+
+struct NutritionProgress {
+    let meals: [Meal]
+    let goals: NutritionGoals
+    private let calendar = Calendar.current
+    func meals(on date: Date) -> [Meal] { meals.filter { calendar.isDate($0.date, inSameDayAs: date) } }
+    func calories(on date: Date) -> Int { meals(on: date).reduce(0) { $0 + $1.calories } }
+    var streak: Int {
+        let today = calendar.startOfDay(for: .now)
+        let start = calories(on: today) >= goals.calories ? today : (calendar.date(byAdding: .day, value: -1, to: today) ?? today)
+        var day = start
+        var count = 0
+        while calories(on: day) >= goals.calories && count < 3650 {
+            count += 1
+            guard let previous = calendar.date(byAdding: .day, value: -1, to: day) else { break }
+            day = previous
+        }
+        return count
+    }
+    var week: [Date] { (-6...0).compactMap { calendar.date(byAdding: .day, value: $0, to: calendar.startOfDay(for: .now)) } }
+}
+
+struct FoodIcon {
+    static func emoji(for name: String) -> String {
+        let value = name.lowercased().filter { $0.isLetter || $0.isNumber }
+        let choices: [(String, String)] = [
+            ("salmon", "🐟"), ("fish", "🐟"), ("shrimp", "🦐"), ("prawn", "🦐"),
+            ("chicken", "🍗"), ("mutton", "🍖"), ("beef", "🥩"), ("steak", "🥩"),
+            ("avocado", "🥑"), ("rice", "🍚"), ("biryani", "🍛"), ("curry", "🍛"),
+            ("dal", "🥣"), ("soup", "🥣"), ("oat", "🥣"), ("yogurt", "🥣"),
+            ("salad", "🥗"), ("broccoli", "🥦"), ("carrot", "🥕"), ("potato", "🥔"),
+            ("tomato", "🍅"), ("corn", "🌽"), ("eggplant", "🍆"), ("mushroom", "🍄"),
+            ("egg", "🥚"), ("bread", "🍞"), ("sandwich", "🥪"), ("burger", "🍔"),
+            ("pizza", "🍕"), ("dosa", "🥞"), ("idli", "🍽️"), ("samosa", "🥟"),
+            ("noodle", "🍜"), ("pasta", "🍝"), ("apple", "🍎"), ("banana", "🍌"),
+            ("orange", "🍊"), ("mango", "🥭"), ("berry", "🫐"), ("strawberry", "🍓"),
+            ("cake", "🍰"), ("icecream", "🍨"), ("coffee", "☕"), ("chai", "☕"),
+            ("milk", "🥛"), ("lassi", "🥛"), ("juice", "🧃"), ("cheese", "🧀"),
+            ("tofu", "🍲"), ("paneer", "🍲"), ("bean", "🫘"), ("greens", "🥬")
+        ]
+        return choices.first(where: { value.contains($0.0) })?.1 ?? "🍽️"
+    }
 }

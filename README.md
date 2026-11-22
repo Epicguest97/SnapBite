@@ -4,6 +4,18 @@ SnapBite is an iOS app that helps you track what you eat by snapping a photo of 
 
 > Repository: [Epicguest97/SnapBite](https://github.com/Epicguest97/SnapBite)
 
+## Screenshots
+
+<p align="center">
+  <img src="screenshots/01-home.jpeg" width="180" alt="SnapBite screenshot 1" />
+  <img src="screenshots/02-scan.jpeg" width="180" alt="SnapBite screenshot 2" />
+  <img src="screenshots/03-nutrition.jpeg" width="180" alt="SnapBite screenshot 3" />
+  <img src="screenshots/04-diary.jpeg" width="180" alt="SnapBite screenshot 4" />
+  <img src="screenshots/05-plans.jpeg" width="180" alt="SnapBite screenshot 5" />
+  <img src="screenshots/06-profile.jpeg" width="180" alt="SnapBite screenshot 6" />
+  <img src="screenshots/07-stats.jpeg" width="180" alt="SnapBite screenshot 7" />
+</p>
+
 ## Features
 
 - **Scan a meal** — Capture a photo with the in-app camera. Live object detection draws bounding boxes over detected foods; take a photo to review.

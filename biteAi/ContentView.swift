@@ -58,7 +58,7 @@ struct ContentView: View {
                 case .log:
                     LogView(meals: meals, goals: goals, openMeal: { mealBeingEdited = $0 })
                 case .plans:
-                    PlansView(goals: goals, profileID: activeProfileID, openGoals: { selectedTab = .profile })
+                    PlansView(goals: $goals, profileID: activeProfileID, openGoals: { selectedTab = .profile })
                 case .profile:
                     ProfileView(goals: $goals, meals: meals, profiles: profiles, activeProfileID: activeProfileID, switchProfile: switchProfile, addProfile: { name in updateActiveProfile(); let newProfile = Profile(name: name, meals: [], goals: NutritionGoals()); profiles.append(newProfile); ProfileStore.save(profiles); switchProfile(newProfile) }, openPlans: { selectedTab = .plans }, rename: { name in if let index = profiles.firstIndex(where: { $0.id == activeProfileID }) { profiles[index].name = name; ProfileStore.save(profiles) } })
                 }

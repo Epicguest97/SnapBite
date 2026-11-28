@@ -23,7 +23,7 @@ private struct PlanTemplate: Identifiable {
 }
 
 struct PlansView: View {
-    let goals: NutritionGoals
+    @Binding var goals: NutritionGoals
     let profileID: UUID
     let openGoals: () -> Void
     @State private var selectedID = ""
@@ -57,7 +57,7 @@ struct PlansView: View {
                 ForEach(PlanTemplate.all) { plan in
                     planCard(plan)
                 }
-                Text("Meal ideas are examples, not a personalized prescription. Portions and calories depend on preparation. Your goals stay unchanged when choosing a plan.").font(.custom("Nunito", size: 12, relativeTo: .caption)).foregroundStyle(AppTheme.mutedForeground)
+                Text("Meal ideas are examples, not a personalized prescription. Portions and calories depend on preparation. Choosing a plan updates your protein target and diet preference; you can adjust them in your profile.").font(.custom("Nunito", size: 12, relativeTo: .caption)).foregroundStyle(AppTheme.mutedForeground)
             }.padding(20).padding(.bottom, 16)
         }.background(AppTheme.canvas)
         .onAppear { loadSelection() }
@@ -70,6 +70,7 @@ struct PlansView: View {
                             Text(plan.icon).font(.system(size: 40))
                             Text(plan.name).font(.custom("Nunito", size: 30, relativeTo: .largeTitle).bold())
                             Text(plan.description).foregroundStyle(AppTheme.mutedForeground)
+                            Text("Protein target: \(plan.id == "protein" ? 90 : plan.id == "veggie" ? 75 : 80)g per day").font(.subheadline.bold())
                             Text("7 days · 21 meal ideas · your goal: \(goals.calories) kcal/day").font(.custom("Nunito", size: 14, relativeTo: .subheadline).bold())
                             Text("The calorie target is your existing goal; these example meals have not been calculated to match it.").font(.caption).foregroundStyle(AppTheme.mutedForeground)
                             ForEach(0..<plan.duration, id: \.self) { day in
@@ -126,6 +127,12 @@ struct PlansView: View {
         started = UserDefaults.standard.object(forKey: dateKey) as? Date ?? .now
     }
     private func choose(_ plan: PlanTemplate) {
+        switch plan.id {
+        case "protein": goals.protein = 90; goals.dietaryPreference = .highProtein
+        case "veggie": goals.protein = 75; goals.dietaryPreference = .vegetarian
+        case "heart": goals.protein = 80; goals.dietaryPreference = .none
+        default: break
+        }
         selectedID = plan.id; started = .now
         UserDefaults.standard.set(plan.id, forKey: selectionKey)
         UserDefaults.standard.set(started, forKey: dateKey)

@@ -13,14 +13,6 @@ struct PersonalGoalCard: View {
     @State private var displayName = ""
     @FocusState private var focused: Bool
     private var prefix: String { "personal.\(profileID.uuidString)." }
-    private var bmr: Double? {
-        guard let a = Double(age), (18...100).contains(a), let w = Double(weight), (30...300).contains(w), let h = Double(height), (100...250).contains(h), sex == "female" || sex == "male" else { return nil }
-        return 10 * w + 6.25 * h - 5 * a + (sex == "male" ? 5 : -161)
-    }
-    private var tdee: Int? {
-        guard let bmr, let factor = Double(activity) else { return nil }
-        return Int((bmr * factor).rounded())
-    }
     var body: some View {
         VStack(spacing: 16) {
             VStack(alignment: .leading, spacing: 16) {
@@ -55,23 +47,7 @@ struct PersonalGoalCard: View {
                 }.tint(AppTheme.accent)
                 Text("Measurements use kg and cm. The formula uses sex-specific coefficients; choose the formula appropriate for you.").font(.custom("Nunito", size: 12, relativeTo: .caption)).foregroundStyle(AppTheme.mutedForeground)
             }.padding(20).background(AppTheme.card, in: RoundedRectangle(cornerRadius: 32)).overlay(RoundedRectangle(cornerRadius: 32).stroke(AppTheme.border))
-            VStack(alignment: .leading, spacing: 14) {
-                HStack {
-                    Image(systemName: "calculator").font(.title2).foregroundStyle(.white).frame(width: 46, height: 46).background(.white.opacity(0.13), in: Circle())
-                    VStack(alignment: .leading) {
-                        Text("Smart daily goal").font(.custom("Nunito", size: 20, relativeTo: .title3).bold()).foregroundStyle(.white)
-                        Text("Estimated maintenance calories").font(.custom("Nunito", size: 12, relativeTo: .caption)).foregroundStyle(.white.opacity(0.7))
-                    }
-                }
-                HStack(spacing: 8) {
-                    stat("Resting", bmr.map { Int($0.rounded()) })
-                    stat("Daily", tdee)
-                    stat("Current", goals.calories)
-                }
-                Text("Mifflin–St Jeor estimate × activity. For adults 18–100; actual needs vary. This estimates maintenance, not a weight-loss target.").font(.custom("Nunito", size: 12, relativeTo: .caption)).foregroundStyle(.white.opacity(0.75))
-                if tdee == nil { Text("Enter valid details and select an activity level to calculate.").font(.caption).foregroundStyle(.white.opacity(0.8)) }
-                Button("Apply estimate") { if let tdee { goals.calories = tdee } }.font(.custom("Nunito", size: 16, relativeTo: .body).bold()).foregroundStyle(AppTheme.foreground).frame(maxWidth: .infinity).padding(14).background(AppTheme.card, in: RoundedRectangle(cornerRadius: 14)).disabled(tdee == nil).opacity(tdee == nil ? 0.5 : 1)
-            }.padding(20).background(AppTheme.forest, in: RoundedRectangle(cornerRadius: 32))
+
         }
         .onAppear { load() }
         .onChange(of: age) { _, value in save("age", value) }
@@ -87,9 +63,6 @@ struct PersonalGoalCard: View {
             Text(title).font(.custom("Nunito", size: 12, relativeTo: .caption)).foregroundStyle(AppTheme.mutedForeground)
             TextField(title, text: text).keyboardType(keyboard).focused($focused).padding(12).background(AppTheme.canvas, in: RoundedRectangle(cornerRadius: 14)).overlay(RoundedRectangle(cornerRadius: 14).stroke(AppTheme.border))
         }.frame(maxWidth: .infinity)
-    }
-    private func stat(_ label: String, _ value: Int?) -> some View {
-        VStack(spacing: 5) { Text(label).font(.caption).foregroundStyle(.white.opacity(0.7)); Text(value.map(String.init) ?? "—").font(.custom("Nunito", size: 18, relativeTo: .headline).bold()).foregroundStyle(.white) }.frame(maxWidth: .infinity).padding(.vertical, 12).background(.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 14))
     }
     private func load() {
         displayName = name
